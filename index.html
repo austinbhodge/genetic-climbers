@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Genetic Climbers</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
+      canvas { display: block; }
+      #hud {
+        position: absolute; top: 0; left: 0; right: 0;
+        display: flex; gap: 20px; padding: 10px 16px;
+        background: rgba(0,0,0,0.7); color: #e0e0e0;
+        font-family: 'Courier New', monospace; font-size: 13px;
+        z-index: 10; user-select: none;
+      }
+      #hud .stat { display: flex; gap: 4px; }
+      #hud .label { color: #888; }
+      #hud .value { color: #4fc3f7; font-weight: bold; }
+      #controls {
+        position: absolute; bottom: 16px; left: 16px;
+        display: flex; gap: 8px; z-index: 10;
+      }
+      #controls button {
+        padding: 6px 14px; border: 1px solid #555; border-radius: 4px;
+        background: rgba(0,0,0,0.7); color: #e0e0e0; cursor: pointer;
+        font-family: 'Courier New', monospace; font-size: 12px;
+      }
+      #controls button:hover { background: rgba(80,80,80,0.7); }
+      #controls button.active { border-color: #4fc3f7; color: #4fc3f7; }
+      #fitness-graph {
+        position: absolute; bottom: 16px; right: 16px;
+        border: 1px solid #333; z-index: 10;
+      }
+      #sliders {
+        position: absolute; bottom: 60px; left: 16px;
+        display: flex; flex-direction: column; gap: 6px; z-index: 10;
+        font-family: 'Courier New', monospace; font-size: 12px; color: #e0e0e0;
+      }
+      #sliders .slider-row {
+        display: flex; align-items: center; gap: 8px;
+      }
+      #sliders .slider-label { color: #888; min-width: 90px; }
+      #sliders .slider-value { color: #4fc3f7; min-width: 30px; text-align: right; }
+      #sliders input[type="range"] {
+        width: 120px; accent-color: #4fc3f7;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hud">
+      <div class="stat"><span class="label">Gen:</span><span class="value" id="hud-gen">0</span></div>
+      <div class="stat"><span class="label">Best:</span><span class="value" id="hud-best">0.0</span></div>
+      <div class="stat"><span class="label">All-time:</span><span class="value" id="hud-alltime">0.0</span></div>
+      <div class="stat"><span class="label">Alive:</span><span class="value" id="hud-alive">0</span></div>
+      <div class="stat"><span class="label">Species:</span><span class="value" id="hud-species">0</span></div>
+    </div>
+    <canvas id="sim-canvas"></canvas>
+    <div id="sliders">
+      <div class="slider-row">
+        <span class="slider-label">Population:</span>
+        <input type="range" id="slider-pop" min="10" max="200" step="10" value="40">
+        <span class="slider-value" id="slider-pop-val">40</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Species δ:</span>
+        <input type="range" id="slider-compat" min="0.2" max="4.0" step="0.1" value="1.0">
+        <span class="slider-value" id="slider-compat-val">1.0</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Terrain:</span>
+        <input type="range" id="slider-terrain" min="0.1" max="1.0" step="0.05" value="0.3">
+        <span class="slider-value" id="slider-terrain-val">0.30</span>
+      </div>
+    </div>
+    <div id="controls">
+      <button id="btn-1x" class="active">1x</button>
+      <button id="btn-5x">5x</button>
+      <button id="btn-max">Max</button>
+      <button id="btn-pause">Pause</button>
+      <button id="btn-restart">Restart</button>
+    </div>
+    <canvas id="fitness-graph" width="280" height="120"></canvas>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
