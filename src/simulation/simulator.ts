@@ -247,13 +247,13 @@ export class Simulator {
 
       // Update fitness tracker
       const currentY = torso.translation().y;
-      const bodyVelY = vel.y;
       const died = updateFitnessTracker(
         creature.tracker,
         currentY,
         energy,
         clawContacts,
-        bodyVelY,
+        vel.x,
+        vel.y,
         dt,
       );
 

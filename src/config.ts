@@ -133,6 +133,18 @@ export const CONFIG = {
   FIT_GRIP_PULL: 5.0,
   /** Reward per grab-release cycle (active climbing rhythm) */
   FIT_GRIP_CYCLE: 0.5,
+  /** Max torso speed (m/s) at which contact-supported height counts as genuine
+   *  climbing. Above this, the creature is treated as ballistic (launched), so
+   *  the height does not count toward "supported climb". Filters fling exploits. */
+  CLIMB_SUPPORT_MAX_SPEED: 3.0,
+  /** Seconds a creature must continuously hold a controlled grip (gripping +
+   *  speed < CLIMB_SUPPORT_MAX_SPEED) before its height counts as SUSTAINED.
+   *  A launch can't satisfy this — it can't cling at its apex — so this is the
+   *  launch-proof climb metric. */
+  SUSTAIN_TIME_SEC: 0.75,
+  /** Reward weight for sustained climb height (the honest climbing signal).
+   *  0 = off (legacy behavior). Raise it to select for real climbing. */
+  FIT_SUSTAINED_CLIMB: 0.0,
 
   // --- Simulation ---
   /** Max time per creature in seconds */

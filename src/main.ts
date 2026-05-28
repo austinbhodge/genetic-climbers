@@ -1,7 +1,7 @@
 import RAPIER from '@dimforge/rapier2d-compat';
 import { createPhysicsWorld, regenerateTerrain, type PhysicsWorld } from './physics/world.ts';
 import { CONFIG } from './config.ts';
-import { NeatPopulation } from './neat/neat.ts';
+import { NeatPopulation, type FullGenome } from './neat/neat.ts';
 import { Simulator } from './simulation/simulator.ts';
 import { Renderer } from './rendering/renderer.ts';
 import { updateHUD, drawFitnessGraph, type FitnessHistory } from './rendering/hud.ts';
@@ -14,12 +14,21 @@ async function main() {
   // Initialize renderer
   const renderer = new Renderer('sim-canvas');
 
+  // Initialize simulator
+  let simulator = new Simulator(physics);
+
+  // --- Replay mode: load a champion genome and watch it climb (no evolution) ---
+  // Open the app with ?replay to load public/champion.json (written by the
+  // headless `npm run evolve`), or ?replay=<path> for a specific file.
+  const replayParam = new URLSearchParams(location.search).get('replay');
+  if (replayParam !== null) {
+    await runReplay(physics, renderer, replayParam || '/champion.json');
+    return;
+  }
+
   // Initialize NEAT population
   let neat = new NeatPopulation(CONFIG.POPULATION_SIZE);
   neat.initialize();
-
-  // Initialize simulator
-  let simulator = new Simulator(physics);
 
   // Fitness history for graph
   const fitnessHistory: FitnessHistory = { best: [], average: [], worst: [] };
@@ -156,6 +165,96 @@ async function main() {
   }
 
   requestAnimationFrame(gameLoop);
+}
+
+/** Replay a saved champion genome: spawn copies of it and loop, no evolution. */
+async function runReplay(physics: PhysicsWorld, renderer: Renderer, path: string) {
+  const NUM_COPIES = 12;
+
+  const res = await fetch(path);
+  if (!res.ok) {
+    alert(`Could not load champion from ${path} (${res.status}). Run "npm run evolve" first.`);
+    return;
+  }
+  const champ = await res.json() as { meta?: Record<string, unknown>; genome: FullGenome };
+  console.log('Replaying champion:', champ.meta);
+
+  const simulator = new Simulator(physics);
+  const controls = setupControls();
+
+  const makeGen = () =>
+    Array.from({ length: NUM_COPIES }, () =>
+      JSON.parse(JSON.stringify(champ.genome)) as FullGenome);
+
+  simulator.spawnGeneration(makeGen());
+  renderer.camera.jumpTo(CONFIG.SPAWN_X_OFFSET, CONFIG.SPAWN_Y);
+
+  const contactSet = new Set<number>();
+  let lastTime = performance.now();
+
+  function loop(now: number) {
+    const frameDt = (now - lastTime) / 1000;
+    lastTime = now;
+
+    if (!controls.paused) {
+      let stepsPerFrame = controls.speed === '1x' ? 1 : controls.speed === '5x' ? 5 : 50;
+      let done = false;
+      for (let i = 0; i < stepsPerFrame; i++) {
+        done = simulator.step();
+        if (done) break;
+      }
+
+      const best = simulator.getBestAlive();
+      if (best) {
+        const torso = physics.world.getRigidBody(best.body.torsoHandle);
+        if (torso) renderer.camera.follow(torso.translation().x, torso.translation().y);
+      }
+
+      // Loop the replay: respawn on a fresh terrain when all copies die.
+      if (done || controls.shouldRestart) {
+        controls.shouldRestart = false;
+        simulator.cleanup();
+        regenerateTerrain(physics, Math.floor(Math.random() * 1000000));
+        simulator.spawnGeneration(makeGen());
+        renderer.camera.jumpTo(CONFIG.SPAWN_X_OFFSET, CONFIG.SPAWN_Y);
+      }
+    }
+
+    const shouldRender = controls.speed !== 'max' || frameDt > 0.1;
+    if (shouldRender) {
+      contactSet.clear();
+      for (const th of physics.terrain.colliderHandles) {
+        const terrainCol = physics.world.getCollider(th);
+        if (terrainCol) {
+          physics.world.contactPairsWith(terrainCol, (other: RAPIER.Collider) => {
+            contactSet.add(other.handle);
+          });
+        }
+      }
+      renderer.clear();
+      renderer.drawTerrain(physics.terrain);
+      renderer.drawCreatures(simulator.creatures, physics.world, contactSet);
+    }
+
+    // Show the best current sustained climb in the HUD.
+    let bestSustained = 0;
+    let alive = 0;
+    for (const c of simulator.creatures) {
+      if (c.alive) alive++;
+      bestSustained = Math.max(bestSustained, c.tracker.startY - c.tracker.sustainedMaxHeight);
+    }
+    updateHUD({
+      generation: 0,
+      bestFitness: bestSustained,
+      allTimeBest: Number(champ.meta?.sustainedClimb ?? 0),
+      alive,
+      numSpecies: 1,
+    });
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
 }
 
 main().catch(console.error);

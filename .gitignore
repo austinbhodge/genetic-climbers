@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Headless experiment artifacts
+experiments/
+champions/
+public/champion.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
